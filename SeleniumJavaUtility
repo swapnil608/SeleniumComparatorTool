@@ -1,0 +1,124 @@
+package com.POSlogComparator.ToolTest;
+
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.util.Iterator;
+import java.util.Set;
+
+import jxl.Sheet;
+import jxl.Workbook;
+import jxl.read.biff.BiffException;
+
+import org.openqa.selenium.By;
+import org.openqa.selenium.NoSuchElementException;
+import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.WebElement;
+import org.openqa.selenium.firefox.FirefoxDriver;
+
+public class POSLogComparatorTool {
+
+	public static void main(String[] args) throws InterruptedException, BiffException, IOException {
+
+
+		//extracting POS logs
+		WebDriver driver = new FirefoxDriver();//to open firefox window
+		driver.get("............../"); //to open pos log comparator 	
+		driver.manage().window().maximize();//to maximize
+		WebElement fetchPoslogTab= driver.findElement(By.linkText("Fetch Poslogs"));
+		fetchPoslogTab.click();
+		//Datasheet
+
+		Workbook wbook = Workbook.getWorkbook(new File("C:\\poslogs\\FPK.xls"));
+		Sheet sheet = wbook.getSheet("Sheet1");
+		int numberOfRows = sheet.getRows();
+		//System.out.println(numberOfRows);
+		for(int i = 0; i<numberOfRows-1;i++)
+		{
+			//System.out.println(sheet.getCell(2,0).getContents().toString());
+			if(sheet.getCell(2,0).getContents().toString().equals("Store")){
+				//System.out.println("Format is correct !");
+				String StoreData = sheet.getCell(2,i+1).getContents().toString();
+				String RegisterData = sheet.getCell(3,i+1).getContents().toString();
+				String TransactionData = sheet.getCell(4,i+1).getContents().toString();
+				String DateData = sheet.getCell(5,i+1).getContents().toString();
+				System.out.println("############## Row Number ############### "+ sheet.getCell(0,i+1).getContents().toString());
+				//To identify Store ID
+				WebElement StoreID= driver.findElement(By.xpath("//input[@id = 'logStoreID']"));
+				StoreID.clear();
+				StoreID.sendKeys(StoreData);
+				Thread.sleep(300);;//to wait for 200 milliseconds
+				//To identify Register ID
+				WebElement RegisterID= driver.findElement(By.xpath("//input[@id = 'logRegisterID']"));
+				RegisterID.clear();
+				RegisterID.sendKeys(RegisterData);
+				Thread.sleep(300);
+
+				//To identify Transaction ID
+				WebElement TransactionID= driver.findElement(By.xpath("//input[@id = 'logTranID']"));
+				TransactionID.clear();
+				TransactionID.sendKeys(TransactionData);
+				Thread.sleep(300);
+
+				//To identify date
+				WebElement Date= driver.findElement(By.xpath("//input[@id = 'logDate']"));
+				Date.clear();
+				Date.sendKeys(DateData);
+				Thread.sleep(300);
+				//To click on generate button
+				WebElement buttonGenerate= driver.findElement(By.xpath("//input[@id = 'CmdGetPoslog']"));
+				buttonGenerate.click();
+				Thread.sleep(3000);
+				try{
+					WebElement ViewInBrowserLink= driver.findElement(By.linkText("View in Browser"));
+					ViewInBrowserLink.click();
+					//to save the generated page
+					Set<String> set = driver.getWindowHandles();
+					Iterator<String> It = set.iterator();
+					String ParentID = It.next();
+					String ChildID = It.next();
+					driver.switchTo().window(ChildID);
+					//driver.close();
+					String Fullurl = driver.getCurrentUrl().toString();
+					String Filename = Fullurl.substring(Fullurl.indexOf('n')+4, Fullurl.length());
+					BufferedWriter writer = null;
+					try
+					{
+						writer = new BufferedWriter(new FileWriter("C:\\poslogs\\"+Filename));
+						writer.write(driver.getPageSource().toString());
+
+					}
+					catch ( IOException e)
+					{
+					}
+					finally
+					{
+						try
+						{
+							if ( writer != null)
+								writer.close( );
+						}
+						catch ( IOException e)
+						{
+						}
+					}
+					driver.close();
+					Thread.sleep(1000);
+					driver.switchTo().window(ParentID);
+
+				}
+				catch (NoSuchElementException e) {
+					System.out.println("4 part key is not valid for the row number - " +sheet.getCell(0,i+1).getContents().toString());	
+				}							
+			}
+			else{
+				System.out.println("Please change the format of the excel sheet !");
+			}
+		}
+		wbook.close();
+		driver.quit();
+
+	}
+
+}
